@@ -12,6 +12,6 @@ def extract_uvs(a):                                    # define function to extr
 
 while True:                                  # start while loop
     geiger_data=uart.readline()              # put the serial data from the geiger into a variable
-    output = data_process(str(geiger_data))  # define output as varibale
+    output = extract_uvs(str(geiger_data))  # define output as varibale
     print (output)                           # prints output
     sleep(1)                                 # puts the geiger to sleep 1 second
