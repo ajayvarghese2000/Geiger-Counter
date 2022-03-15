@@ -55,6 +55,9 @@ The Mighty Ohm Geiger Counter Operates using UART serial communication and outpu
 
 ## Test Plan
 
+
+<div align="center">
+
 |Objective|Testing Strategy|Expected Output|Current Output|Pass/Fail|
 |--|--|--|--|:--:|
 |Functionality of Geiger counter|Plug Geiger directly to computer and view csv values when in range of mild and safe radioactive source. Listen for hum of HV tube. View LED flash|Hardware should react as specified when on switch engaged. CSV values should print automatically onto computer monitor|Hardware reacts as expected. CSV values viewed. CSV values increase when in range of test source|:heavy_check_mark:|
@@ -62,6 +65,8 @@ The Mighty Ohm Geiger Counter Operates using UART serial communication and outpu
 |Raspberry Pi Pico sends relevant data to the Raspberry Pi 3 master|Obtain values from **serial line/relevant i2c bus" or obtain values from directly from master Pi and printing them through **chosen software program**|Values from Geiger counter only should display in program|Testing not yet implement|To be announced post testing|
 |Connects to GUI|Radioactivity section on GUI will be viewed when drone is connected to see if data is present|Geiger data from Master Raspberry Pi 3 can be viewed on GUI in relevant section|Testing not yet implement|To be announced post testing|
 |Correct data is displayed in GUI|Two test sources, of which the team is aware of how many counts should be produced for each, are put in range of the Geiger counter at separate intervals and the data viewed|Data on GUI should correlate with expected results|Testing not yet implement|To be announced post testing|
+
+</div>
 
 ------------
 
