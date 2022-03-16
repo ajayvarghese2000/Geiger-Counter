@@ -11,6 +11,7 @@ def extract_uvs(a):                                    # define function to extr
         i = i+1                                        # increment i
 
 while True:                                  # start while loop
+
     geiger_data=uart.readline()              # put the serial data from the geiger into a variable
     output = extract_uvs(str(geiger_data))  # define output as varibale
     print (output)                           # prints output
