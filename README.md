@@ -45,14 +45,19 @@ The Mighty Ohm Geiger Counter Operates using UART serial communication and outpu
 
 ### Wiring Diagram
 <p align="center">
-	<img src="https://i.imgur.com/2tVKd6g.jpg" alt="drawing"/>
+	<img src="https://i.imgur.com/42rf7sa.jpg" alt="drawing"/>
 </p>
 
 ------------
 
 ## Code Overview
 
-*breakdown of how the code is structured*
+<p align="center">
+	<img src="https://i.imgur.com/jf4rQC8.png" alt="drawing"/>
+</p>
+
+The code is split into 3 main sections, the Raspberry Pi Pico will read the serial data coming in from the UART0 pins, it will then filter the data to only extract the uSv value, then when asked output the data onto the I2C bus. 
+
 
 ------------
 
