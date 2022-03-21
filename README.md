@@ -136,7 +136,19 @@ The code is split into 3 main sections, the Raspberry Pi Pico will read the seri
 
 ## Deployment
 
-*How to get it running and outputting data*
+Once you have compiled the code you will end up with a `.uf2` file. This contains the binary code that needs to be uploaded to the Raspberry Pico. 
+
+This repository contains a `.uf2` file with the default settings in the `build/` directory that you can use.
+
+If you need to change options you need to recompile the code, refer to the [Installation](#installation) section for instructions on how to do that.
+
+**Step 1:** Plug in the Raspberry Pico whilst holding down the BOOTSEL button.
+
+**Step 2:** Navigate to the Pico file directory
+
+**Step 3:** Copy over the `.uf2` file from the `build/` directory. 
+
+Now once you have connected the device as the [Wiring Diagram](#wiring-diagram) your I2C device should be accessible and outputting data when requested.
 
 ------------
 
