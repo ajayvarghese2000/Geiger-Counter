@@ -46,7 +46,7 @@ The Mighty Ohm Geiger Counter Operates using UART serial communication and outpu
 
 ### Wiring Diagram
 <p align="center">
-	<img src="https://i.imgur.com/42rf7sa.jpg" alt="drawing"/>
+	<img src="https://i.imgur.com/XkVusI3.jpg" alt="drawing"/>
 </p>
 
 ------------
