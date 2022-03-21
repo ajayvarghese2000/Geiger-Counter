@@ -27,6 +27,7 @@ This repository contains code that uses a Raspberry Pi Pico to interface with th
 - [Code Overview](#Code-Overview)
 - [Test Plan](#Test-Plan)
 - [Installation](#Installation)
+	- [Prerequisites](#Prerequisites)
 - [Deployment](#Deployment)
 
 ------------
@@ -81,6 +82,8 @@ The code is split into 3 main sections, the Raspberry Pi Pico will read the seri
 ## Installation
 
 *How to download and setup the code on the Pi Pico*
+
+### Prerequisites
 
 ------------
 
