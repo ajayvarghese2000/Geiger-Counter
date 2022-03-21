@@ -66,11 +66,12 @@ The first register at location **0x00** holds the device address of the connecte
 This is sent as 2 I2C Data packets when accessed however the first 8 bits can be ignored as I2C slaves can only take 8 bit address values.
 <p align="center">
 
-|||||||||
-|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 |15|14|13|12|11|10|09|08|
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 |res|res|res|res|res|res|res|res|
+
 |07|06|05|04|03|02|01|00|
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 |DEVICE_ADDRESS.7|DEVICE_ADDRESS.6|DEVICE_ADDRESS.5|DEVICE_ADDRESS.4|DEVICE_ADDRESS.3|DEVICE_ADDRESS.2|DEVICE_ADDRESS.1|DEVICE_ADDRESS.0|
 
 </p>
@@ -87,12 +88,13 @@ When the data is received you must reconstruct the data packets to get the actua
 
 <p align="center">
 
-|||||||||
-|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 |15|14|13|12|11|10|09|08|
-|CPM.15|CPM.14|CPM.13|CPM.12|CPM.11|CPM.10|CPM.9|CPM.8|
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+|CPM.15|CPM.14|CPM.13|CPM.12|CPM.11|CPM.10|CPM.09|CPM.08|
+
 |07|06|05|04|03|02|01|00|
-|CPM.7|CPM.6|CPM.5|CPM.4|CPM.3|CPM.2|CPM.1|CPM.0|
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+|CPM.07|CPM.06|CPM.05|CPM.04|CPM.03|CPM.02|CPM.01|CPM.00|
 
 </p>
 
