@@ -128,9 +128,33 @@ The code is split into 3 main sections, the Raspberry Pi Pico will read the seri
 
 ## Installation
 
-*How to download and setup the code on the Pi Pico*
+This program is written in C for the Raspberry Pico. You can compile the code using the supplied makefile however, you must make sure you have the required toolchains and environment variables installed don your local machine.
 
 ### Prerequisites
+
+- [Pico C/C++ SKD](https://github.com/raspberrypi/pico-sdk)
+- [GNU Embedded Toolchain for Arm](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain)
+- [CMake](https://cmake.org/)
+- [VScode](https://code.visualstudio.com/)
+- [CMake Tools for VScode](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
+- [Python 3.x](https://www.python.org/)
+- [Git](https://git-scm.com/)
+
+if you're on windows you will also need:
+
+- [MinGW-w64](https://www.mingw-w64.org/)
+
+
+Once all the required tool chains are installed and configured open the repository in VScode.
+
+A full guide on hot to get the tool chains set up can be found on the [Getting Started With Raspberry Pi Pico](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf) documentation written by Raspberry Pi Foundation.
+
+Once opened in VScode CMake Tools will automatically configure the project.
+
+You can edit the `CMakeLists.txt` files to add or remove compilation files/libraries.
+
+Once you have made the changes you want, you can compile using CMake. It will create a `.uf2` file with the specified settings in the `build/` directory that you can use and upload to the Pico.
+
 
 ------------
 
