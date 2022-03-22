@@ -57,6 +57,11 @@
 
 // Uncomment this line to enable debugging statements onto USB UART - MUST ENABLE IN MAKEFILE
 //#define DEBUGGING
+#ifndef PICO_DEFAULT_LED_PIN
+    #warning blink example requires a board with a regular LED
+#else
+    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+#endif
 
 
 /* *************** [I2C CONFIGURATION VARIABLES START] *************** */
@@ -283,6 +288,16 @@ void Extract_Data(int position)
     // Write the CPM to the data register
     data[1] = CPM;
 
+    // Blink LED on Data Received
+    if (gpio_get_out_level(LED_PIN)  == true)
+    {
+        gpio_put(LED_PIN, 0);
+    }
+    else
+    {
+        gpio_put(LED_PIN, 1);
+    }
+
     #ifdef DEBUGGING
         printf("Extracted CPM is : %i\n" , CPM);
     #endif
@@ -363,6 +378,8 @@ int main() {
 
     // Initialize GPIO and Debug Over USB UART - MUST ENABLE IN MAKEFILE
     stdio_init_all();
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
 
     /* *************** [I2C CONFIGURATION START] *************** */
 

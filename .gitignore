@@ -1,3 +1,3 @@
 .vscode/
 build/*
-!build/teamc_geiger_counter_i2c.uf2
+!build/*.uf2
