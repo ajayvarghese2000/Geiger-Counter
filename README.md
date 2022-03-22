@@ -55,7 +55,7 @@ The Mighty Ohm Geiger Counter Operates using UART serial communication and outpu
 
 ## Code Overview
 
-The Raspberry Pico acts as an I2C Slave when connected, this slave has the default adress **0x4D**. It has 2 16 bit registers in memory to store and access the data from the geiger counter.
+The Raspberry Pico acts as an I2C Slave when connected, this slave has the default address **0x4D**. It has 2 16 bit registers in memory to store and access the data from the geiger counter.
 
 ## Registers
 
@@ -100,11 +100,23 @@ When the data is received you must reconstruct the data packets to get the actua
 
 ## Event Loops
 
+The Program is dependent on interrupts and the main loop does nothing after setting up the peripherals.
+
+There are two event loops in the program, the UART Loop and the I2C Loop.
+
+The I2C Loop takes priority over the UART Loop.
+
+### UART Loop
+
 <p align="center">
-	<img src="https://i.imgur.com/jf4rQC8.png" alt="drawing"/>
+	<img src="https://i.imgur.com/RwyUM4n.jpg" alt="drawing"/>
 </p>
 
-The code is split into 3 main sections, the Raspberry Pi Pico will read the serial data coming in from the UART0 pins, it will then filter the data to only extract the uSv value, then when asked output the data onto the I2C bus. 
+### I2C Loop
+
+<p align="center">
+	<img src="https://i.imgur.com/PZDLVok.jpg" alt="drawing"/>
+</p>
 
 
 ------------
