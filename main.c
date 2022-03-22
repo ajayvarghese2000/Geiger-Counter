@@ -56,7 +56,7 @@
 
 
 // Uncomment this line to enable debugging statements onto USB UART - MUST ENABLE IN MAKEFILE
-#define DEBUGGING
+//#define DEBUGGING
 
 
 /* *************** [I2C CONFIGURATION VARIABLES START] *************** */
@@ -73,10 +73,10 @@
 // Data Array to hold the information from the registers
 // 0 -> The i2c address of the device itself
 // 1 -> The data
-uint16_t data[2] = {I2C_ADDR, 0};
+volatile uint16_t data[2] = {I2C_ADDR, 0};
 
 // Register Variable to Read/Write data too
-uint8_t register_accessed;
+volatile uint8_t register_accessed;
 
 
 
@@ -106,6 +106,8 @@ volatile char ch[1];
 
 /* *************** [EXECTUTION CODE] *************** */ 
 
+
+
 /**
  * @brief This interrupt is called whenever the i2c0 bus is accessed by the
  * master. It handles what to do on reads and writes as well as resetting
@@ -115,7 +117,7 @@ volatile char ch[1];
 void i2c0_irq_handler() {
 
     // Get interrupt status
-    uint32_t status = i2c0->hw->intr_stat;
+    volatile uint32_t status = i2c0->hw->intr_stat;
 
     // Check to see if we have received data from the I2C master (Will always be called on R/W)
     if (status & I2C_IC_INTR_STAT_R_RX_FULL_BITS) {
@@ -143,7 +145,7 @@ void i2c0_irq_handler() {
             printf("Read Accessed On Register %02x\n", register_accessed);
         #endif
 
-        uint16_t invalid_data = 0;
+        volatile uint16_t invalid_data = 0;
 
         switch (register_accessed)
         {   
@@ -190,27 +192,104 @@ void i2c0_irq_handler() {
     }
 }
 
-// NEED TO UPDATE
-void CPS_CONVERTER(char one, char two){
 
-    uint16_t CPM = 0;
 
-    if ( isdigit(two) == 0)
+/**
+ * @brief When a new line has been loaded into the buffer this function will scan
+ * the buffer and extract data from the CSV string. This function also changes the
+ * extracted value into CPM witch is required by the GUI. Once That is done the data
+ * is written to the 0x01 data register.
+ * 
+ * @param position the position you want to extract data from (6 for uS/h)
+ */
+void Extract_Data(int position)
+{
+    // Counts how many commans have been traversed
+    volatile int Comma_Counter = 0;
+
+    // Stores the extracted string from the big CSV string
+    volatile char Value[8];
+
+    // Reformats the Extracted values to be able to do math opperations
+    volatile char Formatted_Value[6];
+
+    // Counter to the characters from the big CSV string to the Value
+    volatile int j = 0;
+
+    // Loops through the Big CSV string and attempts to get data between 2 sets of commas
+    for (volatile int i = 0; i < sizeof(temp)/sizeof(temp[0]) ; i++)
     {
-        int CPS = one - '0';
-        CPM = CPS * 60 + (rand() % 20);
+        // Check if we're at a comma
+        if (temp[i] == ',')
+        {   
+            // Increment the number of commas traversed
+            Comma_Counter++;
+        }
+
+        // Check if we're at the comma before the position we want
+        if (Comma_Counter == position-1)
+        {   
+            // Add the character from teh big string to the value string
+            Value[j] = temp[i+2];
+
+            // Increment the Value String Counter
+            j++;
+        }
+
+        // Check if we've finished reading everything between two commas we want
+        if (Comma_Counter == position)
+        {   
+            // Exit for loop if we are
+            break;
+        }
+        
     }
-    else
+
+    // Loops through the Value string and removes any non-number character
+    for (volatile int i = 0; i < sizeof(Value)/sizeof(Value[0]) ; i++)
     {
-        int CMP_1 = one - '0';
-        int CMP_2 = two - '0';
-        int CPS = (CMP_1*10) + CMP_2;
-        CPM = CPS * 60 + (rand() % 100);
+        // Checks if the character is a number or not
+        if (isdigit(Value[i]) == 0)
+        {   
+            // If its not a number check if it is a decimal point
+            if (Value[i] == '.')
+            {   
+                // If it is add it to the formated string 
+                Formatted_Value[i] = Value[i];
+            }
+
+            // Check if it is a null point (end of string)
+            if (Value[i] == '\0')
+            {   
+                // Add the null point to the Formatted_Value
+                Formatted_Value[i] = '\0';
+            }
+            
+        }
+        // if it is a number add it to the Formatted_Value
+        else
+        {
+            Formatted_Value[i] = Value[i];
+        }
+
     }
-    
+
+    // Convert the uS/h string into a float
+    volatile float uSpH = strtof(Formatted_Value, NULL);
+
+    // Convert the float into a 16 bit integer of CPM
+    volatile uint16_t CPM = uSpH/0.0057;
+
+    // Write the CPM to the data register
     data[1] = CPM;
+
+    #ifdef DEBUGGING
+        printf("Extracted CPM is : %i\n" , CPM);
+    #endif
     
 }
+
+
 
 /**
  * @brief This interrupt is called whenever data is avaliable on the UART Bus.
@@ -238,12 +317,13 @@ void uart_isq_handler() {
             // Checking if the current line we have in the buffer is Valid
             if (temp[0] == 'C')
             {
-                // If its is valid send the current data to the data extractor
-                CPS_CONVERTER(temp[5], temp[6]);
-                
+               
                 #ifdef DEBUGGING
-                    printf("%s -> %c%c\n",temp , temp[5], temp[6]);
+                    printf("%s\n", temp);
                 #endif
+
+                // Extracting the data from the 6th position of the csv
+                Extract_Data(6);
 
             }
             /*
@@ -277,6 +357,8 @@ void uart_isq_handler() {
 
 /* *************** [Main Loop] *************** */ 
 
+
+
 int main() {
 
     // Initialize GPIO and Debug Over USB UART - MUST ENABLE IN MAKEFILE
@@ -285,7 +367,7 @@ int main() {
     /* *************** [I2C CONFIGURATION START] *************** */
 
     // Initializing the I2C0 Controller on the Pi Pico
-    i2c_init(i2c0, 10000);
+    i2c_init(i2c0, 100000);
 
     // Setting the I2C0 Controller as a I2C Slave
     i2c_set_slave_mode(i2c0, true, I2C_ADDR);
@@ -331,7 +413,6 @@ int main() {
 
     // Now enable the UART to send interrupts - RX only
     uart_set_irq_enables(UART_ID, true, false);
-    srand(time(NULL));
 
     /* *************** [UART CONFIGURATION END] *************** */
 
@@ -348,3 +429,5 @@ int main() {
 
     return 0;
 }
+
+
