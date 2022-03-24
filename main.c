@@ -6,14 +6,7 @@
  * Pi Pico so that it can interface with I2C master controllers to send data
  * when requested of it. 
  * 
- * There are two event loops set up using interrupts. One loop for the UART
- * data and one for I2C communication. The I2C interrupt has the higher priority.
- * 
- * When new data is received from teh geiger counter it is read into a buffer
- * and then send off to be processed to the data of intrest can be extraced.
- * Once extracted it is written to the position 1 of the data array.
- * 
- * At any point the I2C master acn request data from the data array. This is
+ * At any point the I2C master can request data from the data array. This is
  * handled using another interrupt, where by depending on which register it wants
  * access to, the correct data is extracted from the 16 bit register and sent.
  * 
@@ -46,9 +39,6 @@
 // library to handle interrupts from I2C reads and writes
 #include "hardware/irq.h"
 
-// library to communicate over UART from Pico to Geiger
-#include "hardware/uart.h"
-
 
 
 /* *************** [CONFIGURATION VARIABLES] *************** */ 
@@ -56,7 +46,7 @@
 
 
 // Uncomment this line to enable debugging statements onto USB UART - MUST ENABLE IN MAKEFILE
-//#define DEBUGGING
+#define DEBUGGING
 #ifndef PICO_DEFAULT_LED_PIN
     #warning blink example requires a board with a regular LED
 #else
@@ -90,22 +80,28 @@ volatile uint8_t register_accessed;
 
 
 
-/* *************** [UART CONFIGURATION VARIABLES START] *************** */
+/* *************** [Pulse Detect CONFIGURATION VARIABLES START] *************** */
 
 
 
-#define UART_RX 17
-#define UART_TX 16
-#define UART_ID uart0
+// The Pin the Pulse from the Geiger Counter is connected to
+#define PULSE_PIN 2
 
-// Buffers for UART Data to be stored in
-volatile char temp[50];
-volatile int counter = 0;
-volatile char ch[1];
+// Variable to hold the number of pulses the Pico receives
+volatile uint16_t COUNTS = 0;
+
+// A buffer to add the values to when in slow mode
+volatile uint16_t SLOW_MODE_BUFFER[60] = {0};
+
+// Variable to index the SLOW_MODE_BUFFER, resets every 60 seconds
+volatile uint16_t SLOW_MODE_INDEX = 0;
+
+// Struct holding the repeated timer
+struct repeating_timer TIMER;
 
 
 
-/* *************** [UART CONFIGURATION VARIABLES END] *************** */
+/* *************** [Pulse Detect CONFIGURATION VARIABLES END] *************** */
 
 
 
@@ -200,174 +196,115 @@ void i2c0_irq_handler() {
 
 
 /**
- * @brief When a new line has been loaded into the buffer this function will scan
- * the buffer and extract data from the CSV string. This function also changes the
- * extracted value into CPM witch is required by the GUI. Once That is done the data
- * is written to the 0x01 data register.
+ * @brief This function is called whenever the GPIO interrupt flag is high
+ * This is currenty set to trigger on each pulse
  * 
- * @param position the position you want to extract data from (6 for uS/h)
+ * @param gpio The Pin the called the function
+ * @param event The type of event it is
  */
-void Extract_Data(int position)
+void gpio_callback(uint gpio, uint32_t event) 
 {
-    // Counts how many commans have been traversed
-    volatile int Comma_Counter = 0;
+    
+    // Checking if the Pulse Pin is the one that called this function
+    if (gpio == PULSE_PIN)
+    {   
+        // Incrementing the Pulse Count
+        COUNTS++;
 
-    // Stores the extracted string from the big CSV string
-    volatile char Value[8];
-
-    // Reformats the Extracted values to be able to do math opperations
-    volatile char Formatted_Value[6];
-
-    // Counter to the characters from the big CSV string to the Value
-    volatile int j = 0;
-
-    // Loops through the Big CSV string and attempts to get data between 2 sets of commas
-    for (volatile int i = 0; i < sizeof(temp)/sizeof(temp[0]) ; i++)
-    {
-        // Check if we're at a comma
-        if (temp[i] == ',')
-        {   
-            // Increment the number of commas traversed
-            Comma_Counter++;
-        }
-
-        // Check if we're at the comma before the position we want
-        if (Comma_Counter == position-1)
-        {   
-            // Add the character from teh big string to the value string
-            Value[j] = temp[i+2];
-
-            // Increment the Value String Counter
-            j++;
-        }
-
-        // Check if we've finished reading everything between two commas we want
-        if (Comma_Counter == position)
-        {   
-            // Exit for loop if we are
-            break;
-        }
-        
-    }
-
-    // Loops through the Value string and removes any non-number character
-    for (volatile int i = 0; i < sizeof(Value)/sizeof(Value[0]) ; i++)
-    {
-        // Checks if the character is a number or not
-        if (isdigit(Value[i]) == 0)
-        {   
-            // If its not a number check if it is a decimal point
-            if (Value[i] == '.')
-            {   
-                // If it is add it to the formated string 
-                Formatted_Value[i] = Value[i];
-            }
-
-            // Check if it is a null point (end of string)
-            if (Value[i] == '\0')
-            {   
-                // Add the null point to the Formatted_Value
-                Formatted_Value[i] = '\0';
-            }
-            
-        }
-        // if it is a number add it to the Formatted_Value
-        else
+        // Toggling the LED from its previous state
+        if (gpio_get_out_level(LED_PIN)  == true)
         {
-            Formatted_Value[i] = Value[i];
+            gpio_put(LED_PIN, 0);
+            return;
         }
 
-    }
-
-    // Convert the uS/h string into a float
-    volatile float uSpH = strtof(Formatted_Value, NULL);
-
-    // Convert the float into a 16 bit integer of CPM
-    volatile uint16_t CPM = uSpH/0.0057;
-
-    // Write the CPM to the data register
-    data[1] = CPM;
-
-    // Blink LED on Data Received
-    if (gpio_get_out_level(LED_PIN)  == true)
-    {
-        gpio_put(LED_PIN, 0);
-    }
-    else
-    {
         gpio_put(LED_PIN, 1);
+
+        // Returning
+        return;
     }
 
-    #ifdef DEBUGGING
-        printf("Extracted CPM is : %i\n" , CPM);
-    #endif
+    // Returning if any other pin called the interrupt
+    return;
     
 }
 
 
 
 /**
- * @brief This interrupt is called whenever data is avaliable on the UART Bus.
- * It is used to read the data from the geiger counter and then update the 
- * data array in memory. As you can make no guarantees on what point the
- * UART data is at, it reads data into a buffer and only when the
- * buffer matches the line format expected from the sensor will it be sent to
- * the data extractor
+ * @brief The function is called the the repeating timer interrupt is high,
+ * this is currently set to trigger once every seccond
  * 
+ * @param t The Adddress of the timer that called this function
  */
-void uart_isq_handler() {
+void repeating_timer_callback(struct repeating_timer *t)
+{
+    // Local variable to copy the number of counts to
+    volatile uint16_t CPS = COUNTS;
 
-    // Checks if there is Data avaliable on the the RX port
-    while (uart_is_readable(UART_ID)) 
+    // Local variable to do the correct calculations for CPM depending on Fast/Slow Mode
+    volatile uint16_t CPM = 0;
+
+    // Reseting the Number of pulses received
+    COUNTS = 0;
+
+    // Adding the current CPS to the SLOW_MODE_BUFFER
+    SLOW_MODE_BUFFER[SLOW_MODE_INDEX] = CPS;
+
+    // Incrementing the SLOW_MODE_INDEX index
+    SLOW_MODE_INDEX++;
+
+    // Checking if the index is past 60
+    if (SLOW_MODE_INDEX == 60)
     {   
-        // Retrives the first character from the UART Port
-        ch[0] = uart_getc(UART_ID);
-        
-        // Checking if the character is a new line so that we dont read data from the middle
-        if (ch[0] == '\n')
-        {   
-            // Resetting the buffer counter
-            counter = 0;
+        // Reseting the index if it is past the array size
+        SLOW_MODE_INDEX = 0;
+    }
+    
+    // Checking if we're getting less 5 pulses per seccond
+    if (CPS < 5)
+    {
+        /**
+         * If CPS is less than 5 then we're in slow mode, when in slow mode
+         * the cps is added to a revloving buffer of 60 which summed will give
+         * the counts per miniute.
+        */
 
-            // Checking if the current line we have in the buffer is Valid
-            if (temp[0] == 'C')
-            {
-               
-                #ifdef DEBUGGING
-                    printf("%s\n", temp);
-                #endif
-
-                // Extracting the data from the 6th position of the csv
-                Extract_Data(6);
-
-            }
-            /*
-            // Used for debugging
-            else
-            {
-                #ifdef DEBUGGING
-                    printf("Invalid Line In Buffer\n");
-                    printf("%s\n", temp);
-                #endif
-            }
-            
-            */
-            
-            
-        }
-        // If we're not on a new line add the character to the buffer
-        else
+        // Summing up the buffer
+        for (uint8_t i = 0; i < 60; i++)
         {
-            // Adding the Serial Charecter into a buffer
-            temp[counter] = ch[0];
-
-            // Incrementing the buffer counter
-            counter++;
+            CPM = CPM + SLOW_MODE_BUFFER[i];
         }
+
+        #ifdef DEBUGGING
+            printf("SLOW_MODE ");
+        #endif
         
     }
+    else
+    {
+        /**
+         * If CPS is over than 5 then we're in fast mode, when in fast mode
+         * the CPM is 60 '*' the current CPS. So many counts are comming in
+         * per seconds that a buffer will be too slow.
+        */
 
+        // Getting the CPM
+        CPM = CPS*60;
+
+        #ifdef DEBUGGING
+            printf("FAST_MODE ");
+        #endif
+    }
+
+    // Writing the Current CPM to the correct registar
+    data[1] = CPM;
+
+    #ifdef DEBUGGING
+        printf("CPS %i, CPM %i\n", CPS, CPM);
+    #endif
 }
+
 
 
 /* *************** [Main Loop] *************** */ 
@@ -378,10 +315,16 @@ int main() {
 
     // Initialize GPIO and Debug Over USB UART - MUST ENABLE IN MAKEFILE
     stdio_init_all();
+
+    // Initialising the in built LED to toggle when new pulses are received
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
+
+
     /* *************** [I2C CONFIGURATION START] *************** */
+
+
 
     // Initializing the I2C0 Controller on the Pi Pico
     i2c_init(i2c0, 100000);
@@ -410,31 +353,32 @@ int main() {
     /* *************** [I2C CONFIGURATION END] *************** */
 
 
-    /* *************** [UART CONFIGURATION START] *************** */
 
-    // Initialise UART 0 which is connected to the geiger counter
-    uart_init(UART_ID, 9600);
-
-    // Set the GPIO pin mux to the UART - 0 is TX, 1 is RX
-    gpio_set_function(UART_RX, GPIO_FUNC_UART);
-    gpio_set_function(UART_TX, GPIO_FUNC_UART);
-
-    // Set UART flow control CTS/RTS, we don't want these, so turn them off
-    uart_set_hw_flow(UART_ID, false, false);
-    uart_set_format(UART_ID, 8, 1, 0);
-
-    // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(UART0_IRQ, uart_isq_handler);
-    irq_set_priority(UART0_IRQ, 10);
-    irq_set_enabled(UART0_IRQ, true);
-
-    // Now enable the UART to send interrupts - RX only
-    uart_set_irq_enables(UART_ID, true, false);
-
-    /* *************** [UART CONFIGURATION END] *************** */
+    /* *************** [Pulse Interrupt CONFIGURATION START] *************** */
 
 
-    // Printing a Debugging statement to the USB UART
+    // Initialising the Pulse Pin
+    gpio_init(PULSE_PIN);
+
+    // Setting the Pulse Pin as an Input
+    gpio_set_dir(PULSE_PIN, GPIO_IN);
+
+    // Setting the Pulse Pin to pull down by default
+    gpio_pull_down(PULSE_PIN);
+
+    // Enabeling the Interrupt on the Pulse Pin to trigger on rising edge
+    gpio_set_irq_enabled_with_callback(PULSE_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
+
+    // Creating the timer to interrupt every seccond to calculate the CPS
+    add_repeating_timer_ms(1000, repeating_timer_callback, NULL, &TIMER);
+
+
+
+    /* *************** [Pulse Interrupt CONFIGURATION END] *************** */
+
+
+
+    // Printing a Debugging statement to the UART0 on GP0 and GP1
     #ifdef DEBUGGING
         printf("I2C and UART Set-Up and Active\n");
     #endif
