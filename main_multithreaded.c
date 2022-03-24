@@ -39,6 +39,9 @@
 // library to handle interrupts from I2C reads and writes
 #include "hardware/irq.h"
 
+// library to enable multithreading for the two systems
+#include "pico/multicore.h"
+
 
 
 /* *************** [CONFIGURATION VARIABLES] *************** */ 
@@ -297,13 +300,53 @@ void repeating_timer_callback(struct repeating_timer *t)
         #endif
     }
 
-    // Writing the Current CPM to the correct registar
+    // Writing the Current CPM to the Data register
     data[1] = CPM;
 
     #ifdef DEBUGGING
         printf("CPS %i, CPM %i\n", CPS, CPM);
     #endif
 }
+
+
+void core1_entry()
+{
+    /* *************** [Pulse Interrupt CONFIGURATION START] *************** */
+
+    
+    // Initialising the in built LED to toggle when new pulses are received
+    gpio_init(LED_PIN);
+
+    // Setting the LED to be an Output Pin
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+
+
+    // Initialising the Pulse Pin
+    gpio_init(PULSE_PIN);
+
+    // Setting the Pulse Pin as an Input
+    gpio_set_dir(PULSE_PIN, GPIO_IN);
+
+    // Setting the Pulse Pin to pull down by default
+    gpio_pull_down(PULSE_PIN);
+
+    // Enabeling the Interrupt on the Pulse Pin to trigger on rising edge
+    gpio_set_irq_enabled_with_callback(PULSE_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
+
+    // Creating the timer to interrupt every seccond to calculate the CPS
+    add_repeating_timer_ms(1000, repeating_timer_callback, NULL, &TIMER);
+
+
+
+    /* *************** [Pulse Interrupt CONFIGURATION END] *************** */
+
+
+    // Loop forever doing nothing on core 1
+    while (true) {
+        tight_loop_contents();
+    }
+}
+
 
 
 
@@ -316,9 +359,8 @@ int main() {
     // Initialize GPIO and Debug Over USB UART - MUST ENABLE IN MAKEFILE
     stdio_init_all();
 
-    // Initialising the in built LED to toggle when new pulses are received
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
+    // Starting the Pulse Logic on Core 1
+    multicore_launch_core1(core1_entry);
 
 
 
@@ -351,30 +393,6 @@ int main() {
     irq_set_priority(I2C0_IRQ, 0);
 
     /* *************** [I2C CONFIGURATION END] *************** */
-
-
-
-    /* *************** [Pulse Interrupt CONFIGURATION START] *************** */
-
-
-    // Initialising the Pulse Pin
-    gpio_init(PULSE_PIN);
-
-    // Setting the Pulse Pin as an Input
-    gpio_set_dir(PULSE_PIN, GPIO_IN);
-
-    // Setting the Pulse Pin to pull down by default
-    gpio_pull_down(PULSE_PIN);
-
-    // Enabeling the Interrupt on the Pulse Pin to trigger on rising edge
-    gpio_set_irq_enabled_with_callback(PULSE_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
-
-    // Creating the timer to interrupt every seccond to calculate the CPS
-    add_repeating_timer_ms(1000, repeating_timer_callback, NULL, &TIMER);
-
-
-
-    /* *************** [Pulse Interrupt CONFIGURATION END] *************** */
 
 
 
