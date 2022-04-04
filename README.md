@@ -128,10 +128,10 @@ The I2C Loop takes priority over the UART Loop.
 
 |Objective|Testing Strategy|Expected Output|Current Output|Pass/Fail|
 |--|--|--|--|:--:|
-|Geiger counter operates as expected as a single unit|Connect Geiger directly to computer through serial to USB and view csv values as both background values and when in range of test source. Listen for hum of HV tube. View LED flash|Hardware should react as specified when on switch engaged. CSV values should print automatically onto computer monitor|Hardware reacts as expected. CSV values viewed. CSV values increase when in range of test source|:heavy_check_mark:|
-|Connect to Raspberry Pi Pico|Obtain values directly from Pi Pico and printing them through console window|The values should display on in program| The values from the geiger sensor is being displayed|:heavy_check_mark:|
-|Raspberry Pi Pico sends relevant data to the Raspberry Pi 3 master| Obtain values from i2c bus and check against the values from the geiger sensor itself |Values from Geiger counter should display in program|The values from the geiger sensor is being sent to the Main Pi|:heavy_check_mark:|
-|Correct data is displayed in GUI|Two test sources, of which the team is aware of how many counts should be produced for each, are put in range of the Geiger counter at separate intervals and the data viewed|Data on GUI should correlate with expected results|The Values on the GUI correlate with the expected range of the calibrated sample|:heavy_check_mark:|
+|Geiger counter functions as expected independently.|Connect Geiger directly to computer through serial to USB and view displayed output data (CSV) when both in range and out of range (i.e. background radiation) of test sample. Listen for hum of high voltage tube. View LED flash.|Output data printed on screen corresponds to expected values when in range of (CPM) and out of range of (background radiation: 10 - 20 CPM) test sample. High voltage tube should emit hum, LED should light up.|Correct data is displayed. Hardware reacts as expected.|:heavy_check_mark:|
+|Geiger counter sends data to Raspberry Pi Pico.|Connect Geiger counter to Raspberry Pi Pico through UART and view data output in Thonny when in and out of range of test sample.|Thonny window should display expected sample and background radiation values.| Correct data is displayed.|:heavy_check_mark:|
+|Raspberry Pi Pico sends CPM to the Raspberry Pi 4 (master).| Obtain values from I2C bus and check the data correlates with the data collected from previous two tests.|Correct data should display in C program window.|Correct data is displayed.|:heavy_check_mark:|
+|Correct data is being sent to GUI.|Observe data is bring printed in GUI. Ensure data corresponds with previously collected data to calibrate against.|Data on GUI should appear and correlate with expected results.|Correct data is displayed.|:heavy_check_mark:|
 
 </div>
 
